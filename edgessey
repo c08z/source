@@ -1,0 +1,352 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local orbitDistance = 8
+local orbitSpeed = 1
+local orbitAngle = 0
+local targetPlayerName = ""
+local isOrbiting = false
+local Window = OrionLib:MakeWindow({Name = "Survival Edgessey", HidePremium = false, IntroText = "Survival Edgessey", SaveConfig = true, ConfigFolder = "OrbitPlayer"})
+
+
+
+
+-- Values
+_G.AutoPickup = true
+_G.AutoBlood = false
+_G.AutoPlant = true
+_G.KillAura = true
+_G.AutoTap = true
+_G.getClosest = true
+
+
+-- Functions
+function AutoPlant()
+    while _G.AutoPlant == true do
+    if _G.AutoPlant == true then
+        local Player = game:GetService("Players").LocalPlayer
+    for _, v in pairs(Workspace.Important.Deployables:GetChildren()) do
+        if v.Name == "Plant Box" and (Player.Character.Head.Position - v.PrimaryPart.Position).magnitude < 500 then
+            game.ReplicatedStorage.Events.InteractStructure:FireServer(v, "Bloodfruit")
+      
+        end
+end
+task.wait()
+end
+    end
+
+end
+
+
+
+function AutoPickUp()
+	while _G.AutoPickUp == true do
+		
+	end
+end
+
+function KillAura()
+	while _G.KillAura == true do
+		
+	end
+end
+
+
+function AutoBlood()
+	while _G.AutoBlood == true do
+	if _G.AutoBlood == true then 
+	if game:GetService("Players").LocalPlayer.Character:FindFirstChild("Humanoid").Health< 100 then
+	game:GetService("ReplicatedStorage").Events.UseBagItem:FireServer("Bloodfruit") -- fruit
+	 end
+	  task.wait(0.15)
+   end
+end
+end
+
+    
+
+
+--MainTab
+
+
+local Tab = Window:MakeTab({
+	Name = "Main",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+
+Tab:AddToggle({
+	Name = "Auto Plant",
+	Default = false,
+	Callback = function(Value)
+		_G.AutoPlant = Value
+        AutoPlant()
+	end    
+})
+
+Tab:AddToggle({
+	Name = "Auto Heal",
+	Default = false,
+	Callback = function(Value)
+		_G.AutoBlood = Value
+        AutoBlood()
+	end    
+})
+ 
+Tab:AddToggle({
+	Name = "Auto Pickup",
+	Default = false,
+	Callback = function(Value)
+		if Value then
+			_G.AutoPickup = true
+			coroutine.wrap(function()
+				while _G.AutoPickup do
+					for _, item in pairs(game.Workspace.Important.Items:GetChildren()) do
+						local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - item.Position).Magnitude
+						if distance <= 50 then
+							game:GetService("ReplicatedStorage").Events.Pickup:FireServer(item)
+						end
+					end
+					task.wait()
+				end
+			end)()
+		else
+			_G.AutoPickup = false
+		end
+	end    
+})
+
+
+
+
+--MiscTab
+
+local Misc = Window:MakeTab({
+	Name = "Misc",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+Misc:AddSlider({
+	Name = "Field Of View",
+	Min = 40,
+	Max = 140,
+	Default = 100,
+	Color = Color3.fromRGB(60, 234, 176),
+	Increment = 1,
+	ValueName = "FOV",
+	Callback = function(Value)
+		game.Workspace.CurrentCamera.FieldOfView  = Value
+	end    
+})
+
+Misc:AddButton({
+	Name = "Night only / For people who hate sun lmao",
+	Callback = function()
+        game.Lighting.TimeOfDay = 3
+  	end    
+})
+
+Misc:AddSlider({
+	Name = "Brightness",
+	Min = 0.1,
+	Max = 3,
+	Default = 0.1,
+	Color = Color3.fromRGB(60, 234, 176),
+	Increment = 1,
+	ValueName = "Brightness",
+	Callback = function(Value)
+		game.Lighting.Brightness  = Value
+	end    
+})
+
+Misc:AddSlider({
+	Name = "FogEnd",
+	Min = 100,
+	Max = 4500,
+	Default = 2000,
+	Color = Color3.fromRGB(60, 234, 176),
+	Increment = 100,
+	ValueName = "FogEnd",
+	Callback = function(Value)
+		game.Lighting.FogEnd  = Value
+	end    
+})
+
+Misc:AddButton({
+	Name = "Infinite Yield",
+	Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+  	end    
+})
+
+
+--OrbitTab
+
+local MainTab = Window:MakeTab({
+	Name = "Orbit",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+local function updatePlayerDropdown()
+	local playerNames = {}
+	for _, otherPlayer in pairs(Players:GetPlayers()) do
+		table.insert(playerNames, otherPlayer.Name)
+	end
+	return playerNames
+end
+
+MainTab:AddDropdown({
+	Name = "Select Player",
+	Default = "",
+	Options = updatePlayerDropdown(),
+	Callback = function(Value)
+		targetPlayerName = Value
+	end    
+})
+
+MainTab:AddTextbox({
+	Name = "Speed",
+	Default = "1",
+	TextDisappear = true,
+	Callback = function(Value)
+		local newSpeed = tonumber(Value)
+		if newSpeed then
+			orbitSpeed = newSpeed
+		else
+			OrionLib:MakeNotification({
+				Name = "Invalid Number",
+				Content = "what?",
+				Image = "rbxassetid://4483345998",
+				Time = 5
+			})
+		end
+	end  
+})
+
+MainTab:AddToggle({
+	Name = "Orbit",
+	Default = false,
+	Callback = function(Value)
+		isOrbiting = Value
+	end    
+})
+
+local function getPlayerByName(name)
+	for _, otherPlayer in pairs(Players:GetPlayers()) do
+		if otherPlayer.Name == name then
+			return otherPlayer
+		end
+	end
+	return nil
+end
+
+RunService.Heartbeat:Connect(function(deltaTime)
+	if not isOrbiting then return end
+
+	local targetPlayer = getPlayerByName(targetPlayerName)
+	if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
+
+		-- Update orbit angle
+		orbitAngle = orbitAngle + orbitSpeed * deltaTime
+
+		-- Calculate new position
+		local offset = Vector3.new(
+			math.cos(orbitAngle) * orbitDistance,
+			0,
+			math.sin(orbitAngle) * orbitDistance
+		)
+
+		-- Set new position and orientation
+		humanoidRootPart.CFrame = CFrame.new(targetPosition + offset) * CFrame.Angles(0, orbitAngle + math.pi/2, 0)
+	end
+end)
+
+Players.PlayerAdded:Connect(function()
+	OrbitTab:UpdateDropdown({
+		Name = "Select Player",
+		Options = updatePlayerDropdown()
+	})
+end)
+
+Players.PlayerRemoving:Connect(function()
+	OrbitTab:UpdateDropdown({
+		Name = "Select Player",
+		Options = updatePlayerDropdown()
+	})
+end)
+
+--HitboxTab
+
+local Tab = Window:MakeTab({
+	Name = "Hitbox",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+local Section = Tab:AddSection({
+	Name = "Script"
+})
+
+
+Tab:AddButton({
+	Name = "Expand Player Hitbox (Team Check)",
+	Callback = function()
+		local function expandPlayerHitbox()
+			local localPlayer = game.Players.LocalPlayer
+
+			for _, player in ipairs(game.Players:GetPlayers()) do
+				pcall(function()
+					if player ~= localPlayer and player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+						local hitbox = player.Character:FindFirstChild("HumanoidRootPart")
+						if hitbox then
+							hitbox.Size = Vector3.new(10, 10, 10)
+							hitbox.CanCollide = false
+							hitbox.Transparency = 0.5
+							hitbox.Color = Color3.fromRGB(255, 0, 0)
+						end
+					end
+				end)
+			end
+		end
+
+		while true do
+			expandPlayerHitbox()
+			wait(1)
+		end
+	end
+})
+
+Tab:AddButton({
+	Name = "Expand All Player Hitboxes",
+	Callback = function()
+		local function expandAllPlayerHitboxes()
+			local localPlayer = game.Players.LocalPlayer
+
+			for _, player in ipairs(game.Players:GetPlayers()) do
+				pcall(function()
+					if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+						local hitbox = player.Character:FindFirstChild("HumanoidRootPart")
+						if hitbox then
+							hitbox.Size = Vector3.new(10, 10, 10)
+							hitbox.CanCollide = false
+							hitbox.Transparency = 0.5
+							hitbox.Color = Color3.fromRGB(255, 0, 0)
+						end
+					end
+				end)
+			end
+		end
+
+		while true do
+			expandAllPlayerHitboxes()
+			wait(1)
+		end
+	end
+})
